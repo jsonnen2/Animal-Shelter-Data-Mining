@@ -79,7 +79,7 @@ if __name__ == '__main__':
         LinearDiscriminantAnalysis(),
     ]
     # Hyperparameters
-    bootstrap_factor = 2
+    bootstrap_factor = 1
     bootstrap_trials = 10
 
     # load datasets as numpy vectors
@@ -110,7 +110,6 @@ if __name__ == '__main__':
             n = len(training_set)
             X_train, y_train, X_val, y_val = bootstrap(X, y, n*bootstrap_factor)
 
-            print("fitting")
             clf = make_pipeline(StandardScaler(), classifier)
             clf.fit(X_train, y_train)
             val_score = clf.score(X_val, y_val)
