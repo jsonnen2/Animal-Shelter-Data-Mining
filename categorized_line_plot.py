@@ -15,7 +15,7 @@ if __name__ == '__main__':
     '''
     eval_set = 'Validation'
     data = pd.read_csv("all_classifiers/Shelter_Outcome_bs=1.7_save.csv", index_col=0) # 15,000 train & val
-    # data = data.iloc[[0,1,2,3,4,5,7]]
+    data = data.iloc[[0,1,2,3,4,5,6,8]]
     
     val_data = data.map(lambda x: float(x.strip("()").split(",")[0]))
     test_data = data.map(lambda x: float(x.strip("()").split(",")[1]))

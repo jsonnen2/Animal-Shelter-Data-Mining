@@ -340,6 +340,7 @@ class Decision_Tree():
         children = [None] * len(branches)
         tree = Node(attribute, majority_class, dict(zip(branches, children)), parent, disc_split)
 
+        # loop through all branches
         for b, f, t in zip(branches, split_features, split_targets):
             self.num_branches += 1
 
