@@ -4,48 +4,60 @@ import pandas as pd
 import numpy as np
 
 
+def check_for_nan(data):
+    # Iterates through all columns and counts how many times nan appears
+    for col in data.columns:
+        count_of_nan = pd.isna(data[col]).sum()
+        print(f"{col} --> {count_of_nan}")
+
 if __name__ == '__main__':
     # fix printing of numpy arrays
     np.set_printoptions(linewidth=os.get_terminal_size().columns)
 
     # load data
-    data = pd.read_csv("data/raw_data.csv")
+    data = pd.read_csv("data/Austin_Animal_Center_Outcomes.csv")
 
-    # drop 1 value columns 
-    data = data.drop(columns=["animal_type", "count"])
+    # drop unneccessary columns
+    data = data.drop(columns=["Animal ID", "MonthYear"])
     
-    # Remove all age and time features. 
-    # The only time I use is outcome_age_(days) [categorical with 44 bins]
-    data = data.drop(columns=["date_of_birth", "datetime", "monthyear", "outcome_month", "outcome_year", "outcome_hour", "animal_id",
-                              "dob_year", "dob_month", "dob_monthyear", "outcome_age_(days)", "outcome_age_(years)", "sex_age_outcome"])
     # rename some of the columns I kept
-    data = data.rename(columns={"Period Range": "period_range", "Spay/Neuter":"spay/neuter", "outcome_age_(days)": "outcome_age",
-                        "Cat/Kitten (outcome)": "cat/kitten"})
+    data = data.rename(columns={"DateTime": "data_entry_time", "Date of Birth": "DOB"})
 
-    # color1 and color2 represent the color feature well. I don't need color and nan in color2 just means the cat has only 1 color
-    data = data.drop(columns=['color'])
-    data['color2'] = data['color2'].map(lambda x: "none" if pd.isna(x) else x)
-    # 99.8% of cats have 1 breed. So I drop all not-nan breed2. Then use only the breed1 feature. 
-    data = data[data["breed2"].isna()]
-    data = data.drop(columns=["breed", "breed2"])
-    # handle nan values
-    data = data.dropna(subset=["outcome_type"])
-    data['coat_pattern'] = data['coat_pattern'].map(lambda x: "missing" if pd.isna(x) else x)
+    # often, there is no subtype for outcome_type. Solution: replace nan with "none"
+    data['Outcome Subtype'] = data['Outcome Subtype'].map(lambda x: "none" if pd.isna(x) else x)
+
+    # These columns have very few nans. So I just remove every instance of nan
+    data = data[data["Outcome Type"].notna()] # 43 nan
+    data = data[data["Sex upon Outcome"].notna()] # 2 nan
+    data = data[data["Age upon Outcome"].notna()] # 6 nan
     
     # change name to be binary: does animal have a name?
-    data['name'] = data['name'].map(lambda x: 0 if pd.isna(x) else 1)
+    data['Name'] = data['Name'].map(lambda x: 0 if pd.isna(x) else 1)
 
-    # replace nan in outcome_subtype with an empty string ""
-    data['outcome_subtype'] = data['outcome_subtype'].map(lambda x: "" if pd.isna(x) else x)
-    # string concate outcome_type with outcome_subtype
-    data['outcome'] = data['outcome_type'] + '-- ' + data['outcome_subtype']
-    data = data.drop(columns=['outcome_type', 'outcome_subtype'])
+    # string parse the hour at time of outcome. 
+    hours = data['data_entry_time'].str.split(" ").str[1].str.split(":").str[0].astype(int)
+    am_pm = data['data_entry_time'].str.split(" ").str[2]
+    hours = hours + (am_pm == "PM") * 12 # Add 12 when the time is PM.
+    data['hour_of_outcome'] = hours % 24  # Handle 12 AM properly
 
-    # onehot categorical features 
-    categorical_names = ["breed", "color", "outcome_subtype", "outcome_type", "sex_upon_outcome", "sex", "spay/neuter", "Periods",
-                         "period_range", "cat/kitten", "age_group", "breed1", "breed2", "cfa_breed", "domestic_breed", "coat_pattern",
-                         "color1", "color2", "coat"]
-    
+    # string parse the year at time of outcome
+    data['year_of_outcome'] = data['data_entry_time'].str.split(" ").str[0].str.split("/").str[2].astype(int)
+
+    # compute the day of week at time of outcome.
+    datetime_data = pd.to_datetime(data['data_entry_time'], format="%m/%d/%Y %I:%M:%S %p")
+    data['day_of_week_at_outcome'] = datetime_data.dt.day_name()
+
+    # reorder features so the targets are last
+    feature_names = ['Name', 'data_entry_time', 'DOB', 'hour_of_outcome', 'day_of_week_at_outcome', 
+       'Animal Type', 'Sex upon Outcome', 'Age upon Outcome', 'Breed', 'Color',
+       'Outcome Type', 'Outcome Subtype',
+       ]
+    data = data[feature_names]
+
+    data = data.drop(columns=["data_entry_time", "DOB", "hour_of_outcome"])
+
+    data.iloc[:,:-1].to_csv("data/processed_data.csv", index=False)
+
     # train/test split
     n = len(data)
     np.random.seed(42)
@@ -54,6 +66,6 @@ if __name__ == '__main__':
     train = data.iloc[index[:split]]
     test = data.iloc[index[split:]]
 
-    # result should be a numpy matrix of ints
+    # save as a pandas dataframe
     train.to_csv("data/train.csv", index=False)
     test.to_csv("data/test.csv", index=False)

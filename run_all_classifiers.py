@@ -23,12 +23,7 @@ from sklearn.preprocessing import StandardScaler, KBinsDiscretizer
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
-def preprocess_for_sklearn_tree(X_train: pd.DataFrame, y_train, X_val: pd.DataFrame, y_val, 
-                                X_test: pd.DataFrame, y_test, cont_mask):
-    '''
-    Converts data to a onehot encoding
-    '''
-    encode = OneHotEncoder(sparse_output=False)
+
 
 def bootstrap(features: np.array, targets: np.array, size):
     '''
@@ -44,7 +39,7 @@ def bootstrap(features: np.array, targets: np.array, size):
     keep_idx = np.setdiff1d(all_indices, drop_idx)
 
     n = len(keep_idx)
-    split = int(np.floor(0.8*n))
+    split = int(np.floor(0.5*n))
     np.random.shuffle(keep_idx)
     train_idx = keep_idx[:split]
     val_idx = keep_idx[split:]
@@ -55,36 +50,36 @@ def bootstrap(features: np.array, targets: np.array, size):
 
 if __name__ == '__main__':
     classifier_names = [
-        "Majority Classifier",
-        "Nearest Neighbors",
-        "Linear SVM",
+        # "Majority Classifier",
+        # "Nearest Neighbors",
+        # "Linear SVM",
         "RBF SVM",
-        "Decision Tree",
-        "Random Forest",
+        # "Decision Tree",
+        # "Random Forest",
         # "Neural Net",
         # "AdaBoost",
-        "Naive Bayes",
-        "LDA",
+        # "Naive Bayes",
+        # "LDA",
     ]
     classifiers = [
-        DummyClassifier(strategy="most_frequent"),
-        KNeighborsClassifier(3),
-        SVC(kernel="linear", C=0.025),
+        # DummyClassifier(strategy="most_frequent"),
+        # KNeighborsClassifier(3),
+        # SVC(kernel="linear", C=0.025),
         SVC(kernel="rbf", gamma=2, C=1),
-        DecisionTreeClassifier(),
-        RandomForestClassifier(bootstrap=False),
+        # DecisionTreeClassifier(),
+        # RandomForestClassifier(bootstrap=False),
         # MLPClassifier(alpha=1, max_iter=1000),
         # AdaBoostClassifier(algorithm="SAMME"),
-        GaussianNB(var_smoothing=1e-9),
-        LinearDiscriminantAnalysis(),
+        # GaussianNB(var_smoothing=1e-9),
+        # LinearDiscriminantAnalysis(),
     ]
     # Hyperparameters
-    bootstrap_factor = 1
+    bootstrap_factor = 1.7 # 15000 datapoints for train and val
     bootstrap_trials = 10
 
-    # load datasets as numpy vectors
-    training_set = pd.read_csv("data/train.csv").to_numpy()
-    testing_set = pd.read_csv("data/test.csv").to_numpy()
+    # load datasets as numpy arrays
+    training_set = pd.read_csv("data/train.csv").to_numpy()[:,:-1] # remove 2nd target variable
+    testing_set = pd.read_csv("data/test.csv").to_numpy()[:,:-1]
 
     num_classes = len(np.unique(training_set[:,-1]))
     y = training_set[:,-1]
@@ -109,7 +104,7 @@ if __name__ == '__main__':
             # perform bootstrapping
             n = len(training_set)
             X_train, y_train, X_val, y_val = bootstrap(X, y, n*bootstrap_factor)
-
+            
             clf = make_pipeline(StandardScaler(), classifier)
             clf.fit(X_train, y_train)
             val_score = clf.score(X_val, y_val)

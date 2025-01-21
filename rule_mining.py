@@ -7,48 +7,52 @@ from itertools import product
 
 
 data = pd.read_csv("data/train.csv")
-features = data.iloc[:,:-1]
-targets = data.iloc[:,-1]
+features = data.columns[:-2]
+targets = data.columns[-2:] # TODO: change to have outcome_type and outcome_subtype seperate. len(targets)=2
 storage = {}
 
-for col in features.columns:
-    unique, counts = np.unique(features[col].to_numpy(), return_counts=True)
-    storage[col] = (unique, counts)
+for column in features:
+    unique, counts = np.unique(data[column].to_numpy(), return_counts=True)
+    storage[column] = (unique, counts)
 
 # Consider only atomic rules
-for col in features.columns: 
-    for rule in features[col].unique():
-        subset = features[col] == rule
-        target_names, distribution_of_targets = np.unique(targets[subset].to_numpy(), return_counts=True)
-        confidence = distribution_of_targets / subset.sum()
+# for column in features: 
+#     for rule in data[column].unique():
+#         subset = data[column] == rule
+#         target_names, distribution_of_targets = np.unique(data[targets[0]][subset].to_numpy(), return_counts=True)
+#         confidence = distribution_of_targets / subset.sum()
         
-        majority_class = target_names[np.argmax(distribution_of_targets)]
-        print(f"{col} = {rule} --> {majority_class}")
-    print("==========")
+#         majority_class = target_names[np.argmax(distribution_of_targets)]
+#         print(f"{column} = {rule} --> {majority_class}")
+#     print("==========")
 
 
 
-# # method written by claude.ai
-# def get_value_combinations(storage, names):
-#     # Get all unique values for each selected feature
-#     value_lists = [storage[name][0] for name in names]
-    
-#     # Use itertools.product to get all combinations
-#     for values in product(*value_lists):
-#         combination = dict(zip(names, values))
-#         yield combination
+# method written by claude.ai
+def get_value_combinations(data, selected_features):
+    unique_values = {feat: data[feat].unique() for feat in selected_features}
+    feature_values = [unique_values[feat] for feat in selected_features]
+    for combination in product(*feature_values):
+        yield [*zip(selected_features, combination)]
 
-# # Consider all rules which point to target
-# n_bits = len(features.columns)
-# for i in range(2**n_bits): # count in binary. this considers all combinations of features in the antecedent.
-#     binary = np.array([int(b) for b in f'{i:0{n_bits}b}'])
-#     names = features.columns[binary.astype(bool)]
-#     for rule in get_value_combinations(storage, names):
-#         # find the number of datapoints following rule
-#         # and the distribution of their targets
 
-#         subset = [] # O(n) algorithm which finds index of datapoints following the rule
-#         target_names, distribution_of_class = np.unique(targets.iloc[subset].to_numpy(), return_counts=True)
-#         confidence = distribution_of_class / len(subset)
-#         print(rule)
-#         print(target_names[np.argmax(confidence)])
+rule = []
+# for i in range(1, 2**len(features)): # this considers ALL combinations of features
+#     binary = np.array([int(b) for b in f'{i:0{len(features)}b}'])
+for i in range(len(features)):  # this considers only ATOMIC features
+    binary = np.array([1 if j == i else 0 for j in range(len(features))])
+    print(binary)
+    names = features[binary.astype(bool)]
+    for antecedent in get_value_combinations(data, names):
+        
+        # for j in range(1, 2**len(targets)): # iterate through ALL possible targets
+            # binary = np.array([int(a) for a in f'{j:0{len(targets)}b}'])
+        for j in range(len(targets)): # iterate through only ATOMIC targets
+            binary = np.array([1 if k == j else 0 for k in range(len(targets))])
+
+            names = targets[binary.astype(bool)]
+            for predicate in get_value_combinations(data, names):
+                rule.append( (antecedent, predicate) )
+
+for r in rule:
+    print(r)
