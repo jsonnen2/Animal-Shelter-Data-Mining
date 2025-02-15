@@ -1,8 +1,3 @@
-# Code source: Gaël Varoquaux
-#              Andreas Müller
-# Modified for documentation by Jaques Grobler
-# License: BSD 3 clause
-
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,21 +20,34 @@ from sklearn.tree import DecisionTreeClassifier
 
 
 
-def bootstrap(features: np.array, targets: np.array, size):
+def bootstrap(features: np.array, targets: np.array, bs_factor: float, train_val_split: float = 0.9):
     '''
-    sampling with replacement in the range (0, n) I will expect n(1 - (1 - 1/n)^k ) unique datapoints. 
-    k = n:  n(1 - e^-1) = 0.632n
-    k = 2n: n(1 - e^-2) = 0.865n
-    k = 3n: n(1 - e^-3) = 0.950n --> 38,000 (30,500 train; 7500 val)
-    k = 4n: n(1 - e^-4) = 0.982n
-    k = 5n: n(1 - e^-5) = 0.993n --> 5120 (4096 train; 1024 val)
+    Bootstrap factor [0, 1]
+        Represents the expected coverage of the bootstrapping
+
+    When sampling with replacement k times, I expect the coverage (c) to be:
+        1 - e^(-k/n) = c
+
+    k = n:  (1 - e^-1) = 0.632
+    k = 2n: (1 - e^-2) = 0.865
+    k = 3n: (1 - e^-3) = 0.950 
+    k = 4n: (1 - e^-4) = 0.982
+    k = 5n: (1 - e^-5) = 0.993 
+
+    Find the inverse:
+        k = -n * ln(1 - c)
     '''
-    all_indices = np.arange(features.shape[0])
-    drop_idx = np.random.choice(all_indices, size=int(np.floor(size)), replace=True)
+    n = features.shape[0]
+    k = -n * np.log(1 - bs_factor)
+    k = int(np.floor(k))
+
+    all_indices = np.arange(n)
+    # sample with replacement
+    drop_idx = np.random.choice(all_indices, size=k, replace=True)
+    # return indices not sampled
     keep_idx = np.setdiff1d(all_indices, drop_idx)
 
-    n = len(keep_idx)
-    split = int(np.floor(0.5*n))
+    split = int(np.floor(train_val_split * len(keep_idx)))
     np.random.shuffle(keep_idx)
     train_idx = keep_idx[:split]
     val_idx = keep_idx[split:]
@@ -50,31 +58,31 @@ def bootstrap(features: np.array, targets: np.array, size):
 
 if __name__ == '__main__':
     classifier_names = [
-        # "Majority Classifier",
-        # "Nearest Neighbors",
-        # "Linear SVM",
+        "Majority Classifier",
+        "Nearest Neighbors",
+        "Linear SVM",
         "RBF SVM",
-        # "Decision Tree",
-        # "Random Forest",
-        # "Neural Net",
-        # "AdaBoost",
-        # "Naive Bayes",
-        # "LDA",
+        "Decision Tree",
+        "Random Forest",
+        "Neural Net",
+        "AdaBoost",
+        "Naive Bayes",
+        "LDA",
     ]
     classifiers = [
-        # DummyClassifier(strategy="most_frequent"),
-        # KNeighborsClassifier(3),
-        # SVC(kernel="linear", C=0.025),
+        DummyClassifier(strategy="most_frequent"),
+        KNeighborsClassifier(3),
+        SVC(kernel="linear", C=0.025),
         SVC(kernel="rbf", gamma=2, C=1),
-        # DecisionTreeClassifier(),
-        # RandomForestClassifier(bootstrap=False),
-        # MLPClassifier(alpha=1, max_iter=1000),
-        # AdaBoostClassifier(algorithm="SAMME"),
-        # GaussianNB(var_smoothing=1e-9),
-        # LinearDiscriminantAnalysis(),
+        DecisionTreeClassifier(),
+        RandomForestClassifier(bootstrap=False),
+        MLPClassifier(alpha=1, max_iter=1000),
+        AdaBoostClassifier(algorithm="SAMME"),
+        GaussianNB(var_smoothing=1e-9),
+        LinearDiscriminantAnalysis(),
     ]
     # Hyperparameters
-    bootstrap_factor = 1.7 # 15000 datapoints for train and val
+    bootstrap_factor = 0.85 # expected proportion of data to drop for each bootstrap trial
     bootstrap_trials = 10
 
     # load datasets as numpy arrays

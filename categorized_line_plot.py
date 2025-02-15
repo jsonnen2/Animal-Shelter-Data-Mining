@@ -6,10 +6,10 @@ import matplotlib.lines as mlines
 import os
 
 # TODO: perform Wilcoxon difference in means test
+#   - what if classifier performance is not normally distributed?
 
 
 if __name__ == '__main__':
-# def categorized_line_plot():
     '''
     used for pairwise feature subset analysis
     '''
@@ -55,6 +55,7 @@ if __name__ == '__main__':
 
     # Set axis labels
     ax.set_xlabel(f'{eval_set} Accuracy')
+    ax.yaxis.grid(True, linestyle='--', alpha=0.7)
 
     plt.tight_layout()
 
@@ -65,5 +66,5 @@ if __name__ == '__main__':
     # ]
     # ax.legend(handles=legend_handles, loc='lower left')
     
-    plt.savefig(f"./all_classifiers/plot_bs=1.7.png")
+    plt.savefig(f"./all_classifiers/new_plot_bs=1.7.png")
     plt.show()
